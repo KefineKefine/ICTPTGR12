@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <windows.h>
+#include <string>
 using namespace std;
 
 HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -32,23 +33,26 @@ class Human {
 		int st = 50; // energy
 		int fu = 20; // hunger
 		int atk = 10;
-		int def = 2;
 
 		string name = "unknown";
 
-		void inc_stat(int& stat, int inc, int max_val) { stat = max(0, min(max_val, stat + inc)); }
+		void inc_stat(int& stat, int inc, int max_val) { stat = max(0, min(max_val, stat + inc)); print(); }
 
-		void inc_hp(int inc) { inc_stat(hp, inc, MAX_HP); }
-		void inc_st(int inc) { inc_stat(st, inc, MAX_ST); }
-		void inc_fu(int inc) { inc_stat(fu, inc, MAX_FU); }
+		void state_inc(int inc, string positive, string negative, string unit) { bool c = (inc >= 0); print(name + (c ? positive : negative) + to_string(inc) + " " + unit, (c ? 10 : 4) ); }
+		
+		void bar_view(int val, int max_val, string name) { cout << name << " BAR : |[[ "; for (int i = 0 ; i < max_val ; i++ ) { cout << ((i < val) ? "X" : "_"); } cout << " ]]|\n\n"; }
+
+		void inc_hp(int inc) { inc_stat(hp, inc, MAX_HP); state_inc(inc, " was healed +", " was hurt ", "HP"); bar_view(hp, MAX_HP, "HEALTH"); }
+		void inc_st(int inc) { inc_stat(st, inc, MAX_ST); state_inc(inc, " had rested +", " has been tired ", "ST"); bar_view(st, MAX_ST, "STAMINA"); }
+		void inc_fu(int inc) { inc_stat(fu, inc, MAX_FU); state_inc(inc, " was fed +", " got hungry ", "FU"); bar_view(fu, MAX_FU, "FULLNESS"); }
 
 		void hurt(Human attacker, bool p = true) {
 			if (p) { print(attacker.name + " attacked " + name); }
 			inc_hp(-attacker.atk);
 		}
 
-		Human(string _name, int ihp = 100, int ist = 50, int ifu = 20, int iatk = 10, int idef = 2) {
-			name = _name; hp = ihp; st = ist; fu = ifu; atk = iatk; def = idef;
+		Human(string _name, int ihp = 100, int ist = 50, int ifu = 20, int iatk = 10) {
+			name = _name; hp = ihp; st = ist; fu = ifu; atk = iatk;
 			
 		}
 };
@@ -57,7 +61,7 @@ class Zombie: public Human {
 	public:
 		
 		void bite(Human human) {
-			print(name + " attacked " + human.name);
+			print("Zombie " + name + " attacked " + human.name);
 			human.hurt(self, false);
 		}
 };
@@ -70,9 +74,11 @@ void general_print(string header = "HEADER", string text = "text", int hci = 7, 
 	print();
 }
 
+void input_pause() { print("Input '0' to proceed."); int buffer; cin >> buffer; }
+
 void query_print(string header = "decision", string text = "result") { general_print( header, text, 4, 7, 15, "-" ); }
 
-void decision_print(string header = "decision", string text = "result") { general_print( header, text, 8, 7, 10, "-" ); print("Input '0' to proceed."); int buffer; cin >> buffer; }
+void decision_print(string header = "decision", string text = "result") { general_print( header, text, 8, 7, 10, "-" ); input_pause(); }
 
 int chapter = 0;
 
@@ -130,9 +136,8 @@ void setup() {
 				separator();
 
 				print("\nGOOD LUCK, SURVIVOR!\nRemember, every decision matters. Choose wisely, manage your points, and stay alive!\n");
-				print("Input '0' to proceed.");
 				
-				int buffer; cin >> buffer;
+				input_pause();
 
 				choice = -1;
 				break;
@@ -169,10 +174,7 @@ int main() {
 	general_print(
 		"Name your PLAYER",
 		"Provide your vessel a name so that it may be referred to that way.",
-		2,
-		8,
-		30,
-		"-"
+		2, 8, 30, "-"
 	);
 
 	string pname;
@@ -196,15 +198,19 @@ int main() {
 
 				switch (query_buffer()) {
 					case 1:
+						player.inc_st(-5);
+					
 						decision_print(
 							"Peek through the hallway.",
 							"You crack the door open just enough to see down the corridor. Two infected test subjects are tearing into a security guard at the far end, completely distracted. You slip out quietly into the opposite hallway, avoiding their notice."
 						);
 						
+						
 
 						break;
-					default:
-						break;
+					//default:
+						// theoretically it should never reach here due to query_buffer(), so just never add the default case
+						//break;
 				}
 
 				break;

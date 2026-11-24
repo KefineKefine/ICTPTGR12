@@ -10,6 +10,8 @@ HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
 void color(int idx = 7) { SetConsoleTextAttribute(h, idx); }
 
 bool active = true;
+int retry_code = -1;
+string pname = "";
 
 void print(string text = "", int color_idx = 7) { color(color_idx); cout << text << "\n"; color(); }
 
@@ -76,9 +78,9 @@ void general_print(string header = "HEADER", string text = "text", int hci = 7, 
 
 void input_pause() { print("Input '0' to proceed."); int buffer; cin >> buffer; }
 
-void query_print(string header = "decision", string text = "result") { general_print( header, text, 4, 7, 15, "-" ); }
+void query_print(string header = "decision", string text = "result") { general_print( header, text, 9, 7, 15, "-" ); }
 
-void decision_print(string header = "decision", string text = "result") { general_print( header, text, 8, 7, 10, "-" ); input_pause(); }
+void decision_print(int php, string header = "decision", string text = "result") { if (php <= 0) { return; } general_print( header, text, 8, 7, 10, "-" ); input_pause(); }
 
 int chapter = 0;
 
@@ -144,7 +146,9 @@ void setup() {
 			case 3:
 				active = false;
 				chapter = -2;
-				break;
+				retry_code = -1;
+				pname = "";
+				return;
 			default:
 				err("Enter a valid index.");
 				break;
@@ -164,21 +168,24 @@ int query_buffer() {
 	while (true) { cin >> ib; if (ib > 0 && ib < 4) { return ib; } else { err("Enter a valid choice."); } }
 }
 
-
-int main() {
-
+void gameplay(string _pname = "") {
+	retry_code = -1;
 	
-
-	setup();
-
-	general_print(
-		"Name your PLAYER",
-		"Provide your vessel a name so that it may be referred to that way.",
-		2, 8, 30, "-"
-	);
-
-	string pname;
-	cin >> pname;
+	
+	if (_pname == "") {
+		setup();
+		if (chapter != -2) {
+			general_print(
+				"Name your PLAYER",
+				"Provide your vessel a name so that it may be referred to that way.",
+				2, 8, 30, "-"
+			);
+			cin >> pname;
+		}
+	} else { // quick setup
+		chapter = 1;
+		pname = _pname;
+	}
 
 	Human player(pname);
 
@@ -187,12 +194,12 @@ int main() {
 			case 1:
 			
 				// the beginning
-				
+
 				query_print(
 					"October 24, 2026 - 6:30am",
 					choice_formatting(
 						"You, " + pname + ", wake up to the sound of screaming and alarms. You are one of five participants in an experimental study conducted by a scientist developing a potential cure for the Hantavirus. Unfortunately, the experiment failed for the other four participants. They developed severe neurological complications, became aggressive, and transformed into zombie-like creatures. You were the only successful subject.\n\nOne of the infected escaped containment and attacked the facility's personnel, spreading the outbreak throughout the building. You hear footsteps and screams outside your room. Something is terribly wrong.\n\nWhat will you do?",
-						"Peek through the hallway.", "Barricade your room", "Immediately leave your room"
+						"Peek through the hallway.", "Barricade your room.", "Immediately leave your room."
 					)
 				);
 
@@ -201,11 +208,35 @@ int main() {
 						player.inc_st(-5);
 					
 						decision_print(
+							player.hp,
 							"Peek through the hallway.",
 							"You crack the door open just enough to see down the corridor. Two infected test subjects are tearing into a security guard at the far end, completely distracted. You slip out quietly into the opposite hallway, avoiding their notice."
 						);
+
+						break;
 						
+					case 2:
+						player.inc_hp(-10);
+						player.inc_st(-15);
+
+						decision_print(
+							player.hp,
+							"Barricade your room.",
+							"You shove the heavy steel bedframe against the door, straining your muscles. Minutes later, an infected slams against the frame. The impact splinters the wood and sends sharp debris into your arm before you force your way out through a side bathroom window."
+						);
+
+						break;
+
+					case 3:
 						
+						player.inc_hp(-25);
+						player.inc_st(-10);
+
+						decision_print(
+							player.hp,
+							"Immediately leave your room.",
+							"You throw the door open and sprint straight into an infected researcher. It lunges at you, clawing deeply at your shoulder before you manage to shove it off and stumble down the stairwell."
+						);
 
 						break;
 					//default:
@@ -213,16 +244,108 @@ int main() {
 						//break;
 				}
 
+				chapter = 2;
+
 				break;
 
 			case 2:
+				
+				// the beginning
+
+				query_print(
+					"October 24, 2026 - 6:50am",
+					choice_formatting(
+						"You discover that the air vent connects to the maintenance corridor. However, you hear infected individuals approaching. You need to escape quickly.\n\nWhich route will you take?",
+						"Crawl through the ventilation system.", "Run through the main hallway.", "Search the security office."
+					)
+				);
+
+				switch (query_buffer()) {
+					case 1:
+						player.inc_st(-10);
+					
+						decision_print(
+							player.hp,
+							"Crawl through the ventilation system.",
+							"The metal ducts are tight and suffocating, but the infected cannot reach you. You crawl silently above the chaos and drop down safely right next to the unguarded maintenance exit."
+						);
+
+						break;
+						
+					case 2:
+						player.inc_hp(-30);
+						player.inc_st(-20);
+
+						decision_print(
+							player.hp,
+							"Run through the main hallway.",
+							"You sprint down the main corridor, but the automatic glass doors at the entrance are locked down. Cornered by three infected, you barely smash through a side window, taking heavy cuts and bites as you scramble outside."
+						);
+
+						break;
+
+					case 3:
+						
+						player.inc_hp(-15);
+						player.inc_st(-10);
+
+						decision_print(
+							player.hp,
+							"Search the security office.",
+							"You duck into the security office and grab a master keycard off the desk. Just as you turn to leave, a glass partition shatters—an infected lunges through, slashing your leg before you swipe the card and slam the heavy exit door shut behind you."
+						);
+
+						break;
+				}
+
+				chapter = 3;
+
 				break;
 		}
 
+		// death check
 		
-		print("end of the line");
+		if (player.hp <= 0) {
+			print(); separator(25, "! "); print();
+			print(choice_formatting(
+				"- ~~ !!! YOU DIED !!! ~~ -",
+				"RESTART", "MAIN MENU", "QUIT"
+			));
+			chapter = 0;
+			
+			switch (query_buffer()) {
+				case 1:
+					active = false;
+					retry_code = 0;
+					break;
+				case 2:
+					active = false;
+					retry_code = 1;
+					pname = "";
+					break;
+				case 3:
+					active = false;
+					retry_code = -1;
+					chapter = -2;
+					pname = "";
+					return;
+			}
+				
+			
+		} // else, keep going!
+
 	}
+
 	
+}
+
+int main() {
+	while (true) {
+		gameplay();
+		if (retry_code == 0) { active = true; gameplay(pname); }
+		else if (retry_code == 1) { active = true; gameplay(); }
+		else { break; }
+	}
 	return 0;
 }
 

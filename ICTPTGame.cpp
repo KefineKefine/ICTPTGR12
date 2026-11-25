@@ -201,9 +201,15 @@ string choice_formatting(string desc, string c1, string c2, string c3) {
 int query_buffer() {
 	int ib;
 	while (true) {
-		cin.clear();
-		cin >> ib; if (ib > 0 && ib < 4) { return ib; }
-		err("Enter a valid choice."); 
+		if (!(cin >> ib)) {
+			cin.clear();
+			cin.ignore(10000, '\n');
+			err("Enter a valid choice.");
+			continue;
+		}
+		if (ib > 0 && ib < 4) { return ib; }
+		err("Enter a valid choice.");
+		cin.ignore(10000, '\n');
 	}
 }
 

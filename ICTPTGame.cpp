@@ -4,6 +4,7 @@
 #include <iostream>
 #include <windows.h>
 #include <string>
+#include <random>
 using namespace std;
 
 HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -29,7 +30,7 @@ class Human {
 		const int MAX_FU = 50;
 
 	public:
-		Human& self = *this;
+		//Human& self = *this;
 	
 		int hp = 100; // health
 		int st = 50; // energy
@@ -42,20 +43,21 @@ class Human {
 
 		void state_inc(int inc, string positive, string negative, string unit) { bool c = (inc >= 0); print(name + (c ? positive : negative) + to_string(inc) + " " + unit, (c ? 10 : 4) ); }
 		
-		void bar_view(int val, int max_val, string name) { cout << name << " BAR : |[[ "; for (int i = 0 ; i < max_val ; i++ ) { cout << ((i < val) ? "X" : "_"); } cout << " ]]|\n\n"; }
+		//void bar_view(int val, int max_val, string name) { cout << name << " BAR : |[[ "; for (int i = 0 ; i < max_val ; i++ ) { cout << ((i < val) ? "X" : "_"); } cout << " ]]|\n\n"; }
 		void bar_num(int val, int max_val, string name) { cout << name + ": " + to_string(val) + "/" + to_string(max_val) << "\n"; }
 
-		void inc_hp(int inc) { inc_stat(hp, inc, MAX_HP); state_inc(inc, " was healed +", " was hurt ", "HP"); bar_view(hp, MAX_HP, "HEALTH"); }
-		void inc_st(int inc) { if (st <= 0 && inc < 0) { st_to_dmg(inc); } inc_stat(st, inc, MAX_ST); state_inc(inc, " had rested +", " has been tired ", "ST"); bar_view(st, MAX_ST, "STAMINA"); }
-		void inc_fu(int inc) { inc_stat(fu, inc, MAX_FU); state_inc(inc, " was fed +", " got hungry ", "FU"); bar_view(fu, MAX_FU, "FULLNESS"); }
+		void inc_hp(int inc) { hp = min(hp + inc, MAX_HP); state_inc(inc, " was healed +", " was hurt ", "HP"); bar_hp(); }
+		void inc_st(int inc) { if (st <= 0 && inc < 0) { st_to_dmg(inc); } inc_stat(st, inc, MAX_ST); state_inc(inc, " had rested +", " has been tired ", "ST"); bar_st(); }
+		void inc_fu(int inc) { inc_stat(fu, inc, MAX_FU); state_inc(inc, " was fed +", " got hungry ", "FU"); bar_fu(); }
 
 		void bar_hp() { bar_num(hp, MAX_HP, "HEALTH"); }
 		void bar_st() { bar_num(st, MAX_ST, "STAMINA"); }
 		void bar_fu() { bar_num(fu, MAX_FU, "FULLNESS"); }
 
-		void hurt(Human attacker, bool p = true) {
-			if (p) { print(attacker.name + " attacked " + name); }
-			inc_hp(-attacker.atk);
+		void hurt(int dmg, string attacker_name, bool p = true) {
+			if (p) { print(attacker_name + " attacked " + name); }
+			print(to_string(dmg) + " on " + to_string(hp));
+			inc_hp(dmg);
 		}
 
 		void st_to_dmg(int inc = 0) { inc_hp(int(inc * 0.5)); }
@@ -70,10 +72,28 @@ class Zombie: public Human {
 	public:
 		
 		void bite(Human human) {
-			print("Zombie " + name + " attacked " + human.name);
-			human.hurt(self, false);
+			print("\n << Zombie " + name + " attacked " + human.name + " >>");
+			human.hurt(-atk, name, false);
 		}
+
+		Zombie(string _name, int iatk = 10, int ihp = 100, int ist = 50, int ifu = 20)
+			: Human(_name, ihp, ist, ifu, iatk) {
+			
+		}
+
+		
 };
+
+string rando_zombie_name() {
+	// randomization
+	random_device rd;
+	mt19937 gen(rd());
+	uniform_int_distribution<int> int_dist(1, 10);
+	int r_int = int_dist(gen); // random number
+
+	string zombie_names[10] = { "Mio", "Drei", "Reyjen", "Rance", "Santi", "Magnus", "Matteo", "Willard", "Macky", "Samy" };
+	return zombie_names[r_int];
+}
 
 void general_print(string header = "HEADER", string text = "text", int hci = 7, int tci = 7, int sl = 15, string ss = "=") {
 	separator(sl, ss); print();
@@ -87,7 +107,7 @@ void input_pause() { print("Input '0' to proceed."); int buffer; cin >> buffer; 
 
 void query_print(string header = "decision", string text = "result") { general_print( header, text, 9, 7, 15, "-" ); }
 
-void decision_print(int php, string header = "decision", string text = "result") { if (php <= 0) { return; } general_print( header, text, 8, 7, 10, "-" ); input_pause(); }
+void decision_print(int& php, string header = "decision", string text = "result") { if (php <= 0) { return; } general_print( header, text, 8, 7, 10, "-" ); input_pause(); }
 
 int chapter = 0;
 
@@ -172,7 +192,11 @@ string choice_formatting(string desc, string c1, string c2, string c3) {
 
 int query_buffer() {
 	int ib;
-	while (true) { cin >> ib; if (ib > 0 && ib < 4) { return ib; } else { err("Enter a valid choice."); } }
+	while (true) {
+		cin.clear();
+		cin >> ib; if (ib > 0 && ib < 4) { return ib; }
+		err("Enter a valid choice."); 
+	}
 }
 
 void gameplay(string _pname = "") {
@@ -194,6 +218,8 @@ void gameplay(string _pname = "") {
 		pname = _pname;
 	}
 
+	
+
 	Human player(pname);
 
 	while (active) {
@@ -211,7 +237,7 @@ void gameplay(string _pname = "") {
 				);
 
 				switch (query_buffer()) {
-					case 1:
+					case 1: {
 						player.inc_st(-5);
 					
 						decision_print(
@@ -221,9 +247,10 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
-						
-					case 2:
-						player.inc_hp(-10);
+					}
+					case 2: {
+						Zombie z(rando_zombie_name(), 10);
+						z.bite(player);
 						player.inc_st(-15);
 
 						decision_print(
@@ -233,10 +260,11 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
+					}
 
-					case 3:
-						
-						player.inc_hp(-25);
+					case 3: {
+						Zombie z(rando_zombie_name(), 25);
+						z.bite(player);
 						player.inc_st(-10);
 
 						decision_print(
@@ -249,6 +277,7 @@ void gameplay(string _pname = "") {
 					//default:
 						// theoretically it should never reach here due to query_buffer(), so just never add the default case
 						//break;
+					}
 				}
 
 				chapter = 2;
@@ -279,8 +308,9 @@ void gameplay(string _pname = "") {
 
 						break;
 						
-					case 2:
-						player.inc_hp(-30);
+					case 2: {
+						Zombie z(rando_zombie_name() + ", " + rando_zombie_name() + ", and " + rando_zombie_name(), 30);
+						z.bite(player);
 						player.inc_st(-20);
 
 						decision_print(
@@ -291,9 +321,11 @@ void gameplay(string _pname = "") {
 
 						break;
 
-					case 3:
+					}
+					case 3: {
 						
-						player.inc_hp(-15);
+						Zombie z(rando_zombie_name(), 15);
+						z.bite(player);
 						player.inc_st(-10);
 
 						decision_print(
@@ -303,6 +335,7 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
+					}
 				}
 
 				chapter = 3;
@@ -334,8 +367,9 @@ void gameplay(string _pname = "") {
 
 						break;
 						
-					case 2:
-						player.inc_hp(-25);
+					case 2: {
+						Zombie z(rando_zombie_name(), 25);
+						z.bite(player);
 						player.inc_st(-15);
 						player.inc_fu(5);
 
@@ -346,7 +380,7 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
-
+					}
 					case 3:
 						
 						player.inc_st(-5);
@@ -403,8 +437,8 @@ void gameplay(string _pname = "") {
 				);
 
 				switch (query_buffer()) {
-					case 1:
-						player.inc_hp(-25);
+					case 1: {
+						Zombie z(rando_zombie_name() + ", " + rando_zombie_name() + ", and " + rando_zombie_name(), 25);
 						player.inc_st(-15);
 					
 						decision_print(
@@ -414,7 +448,7 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
-						
+					}
 					case 2:
 						player.inc_st(-10);
 
@@ -426,9 +460,9 @@ void gameplay(string _pname = "") {
 
 						break;
 
-					case 3:
+					case 3: {
 						
-						player.inc_hp(-15);
+						Zombie z(rando_zombie_name() + ", and " + rando_zombie_name(), 15);
 						player.inc_st(-15);
 						player.inc_fu(20);
 
@@ -439,6 +473,7 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
+					}
 				}
 
 				chapter = 6;
@@ -471,8 +506,9 @@ void gameplay(string _pname = "") {
 
 						break;
 						
-					case 2:
-						player.inc_hp(-30);
+					case 2: {
+						Zombie z(rando_zombie_name() + ", " + rando_zombie_name() + ", and " + rando_zombie_name(), 30);
+						z.bite(player);
 						player.inc_st(-15);
 
 						decision_print(
@@ -482,10 +518,12 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
+					}
 
-					case 3:
+					case 3: {
 						
-						player.inc_hp(-10);
+						Zombie z(rando_zombie_name(), 10);
+						z.bite(player);
 						player.inc_st(-10);
 
 						decision_print(
@@ -495,6 +533,7 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
+					}
 				}
 
 				chapter = 7;
@@ -536,9 +575,10 @@ void gameplay(string _pname = "") {
 
 						break;
 
-					case 3:
+					case 3: {
 						
-						player.inc_hp(-35);
+						Zombie z("Big Chonggo", 35);
+						z.bite(player);
 						player.inc_st(-15);
 
 						decision_print(
@@ -548,6 +588,7 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
+					}
 				}
 
 				chapter = 8;
@@ -592,8 +633,8 @@ void gameplay(string _pname = "") {
 				);
 
 				switch (query_buffer()) {
-					case 1:
-						player.inc_hp(-25);
+					case 1: {
+						Zombie z(rando_zombie_name() + ", " + rando_zombie_name() + ", and " + rando_zombie_name(), 25);
 						player.inc_st(-15);
 					
 						decision_print(
@@ -603,7 +644,7 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
-						
+					}
 					case 2:
 						player.inc_st(-10);
 
@@ -658,8 +699,8 @@ void gameplay(string _pname = "") {
 
 						break;
 						
-					case 2:
-						player.inc_hp(-30);
+					case 2: {
+						Zombie z(rando_zombie_name() + ", " + rando_zombie_name() + ", and " + rando_zombie_name(), 30);
 						player.inc_st(-25);
 
 						decision_print(
@@ -669,7 +710,7 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
-
+					}
 					case 3:
 						
 						player.inc_hp(-10);
@@ -712,8 +753,8 @@ void gameplay(string _pname = "") {
 
 						break;
 						
-					case 2:
-						player.inc_hp(-10);
+					case 2: {
+						Zombie z(rando_zombie_name() + ", and " + rando_zombie_name(), 10);
 						player.inc_st(-10);
 
 						decision_print(
@@ -723,10 +764,10 @@ void gameplay(string _pname = "") {
 						);
 
 						break;
-
+					}
 					case 3:
 						
-						player.inc_hp(-40);
+						Zombie z(rando_zombie_name() + ", " + rando_zombie_name() + ", and " + rando_zombie_name(), 40);
 						player.inc_st(-25);
 
 						decision_print(
@@ -762,7 +803,7 @@ void gameplay(string _pname = "") {
 						"You quickly board Brent's rescue vehicle as the team prepares to leave. The doors close, and the vehicle moves away from the evacuation point just as infected individuals begin approaching.\n\n Through the window, you watch the city disappear into the distance. After three days of surviving the outbreak, making difficult decisions, and fighting to stay alive, you have finally made it.\n\n The rescue team brings you to a secure evacuation center, where medical personnel examine you and confirm that you are not infected.\n\n For the first time since the outbreak began, you can finally breathe without fear.\n\n YOU SURVIVED! YOU HAVE BEEN RESCUED!"
 					);
 
-					input_pause();
+					//input_pause();
 
 					
 				} else {
@@ -773,7 +814,7 @@ void gameplay(string _pname = "") {
 						"You board the vehicle, believing that you have finally found a way to escape the outbreak. However, as the journey continues, you overhear Chiro and Rainne discussing something disturbing.\n\n You soon discover the truth: they were the scientists behind the experimental medicine that caused the outbreak. The first laboratory experiment had failed, and the other four participants had become infected. You were the only successful subject, which made you their next priority. \n\n They never intended to rescue you. They planned to take you back to their laboratory and conduct another experiment, hoping to achieve the results they failed to obtain the first time.\n\n Before you can escape, they reveal their true intentions and expose you to the infection once again. You realize that the people you trusted were responsible for everything that happened.\n\n THE EXPERIMENT WAS NEVER OVER. YOU WERE ALWAYS THEIR NEXT TEST SUBJECT."
 					);
 
-					input_pause();
+					//input_pause();
 
 					player.inc_hp(-500);
 

@@ -5,6 +5,7 @@
 #include <windows.h>
 #include <string>
 #include <random>
+#include <chrono>
 using namespace std;
 
 HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -56,7 +57,6 @@ class Human {
 
 		void hurt(int dmg, string attacker_name, bool p = true) {
 			if (p) { print(attacker_name + " attacked " + name); }
-			print(to_string(dmg) + " on " + to_string(hp));
 			inc_hp(dmg);
 		}
 
@@ -71,7 +71,7 @@ class Human {
 class Zombie: public Human {
 	public:
 		
-		void bite(Human human) {
+		void bite(Human& human) {
 			print("\n << Zombie " + name + " attacked " + human.name + " >>");
 			human.hurt(-atk, name, false);
 		}
@@ -86,9 +86,17 @@ class Zombie: public Human {
 
 string rando_zombie_name() {
 	// randomization
-	random_device rd;
-	mt19937 gen(rd());
-	uniform_int_distribution<int> int_dist(1, 10);
+	static mt19937 gen([]() {
+		random_device rd;
+		auto now = chrono::high_resolution_clock::now().time_since_epoch().count();
+		seed_seq seq{
+			rd(),
+			static_cast<unsigned int>(now),
+			static_cast<unsigned int>(now >> 32)
+		};
+		return mt19937(seq);
+	}());
+	uniform_int_distribution<int> int_dist(0, 9);
 	int r_int = int_dist(gen); // random number
 
 	string zombie_names[10] = { "Mio", "Drei", "Reyjen", "Rance", "Santi", "Magnus", "Matteo", "Willard", "Macky", "Samy" };

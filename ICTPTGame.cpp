@@ -186,6 +186,8 @@ void setup() {
 				return;
 			default:
 				err("Enter a valid index.");
+				cin.ignore(10000, '\n');
+				chapter = 0;
 				break;
 		}
 	}
